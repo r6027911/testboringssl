@@ -1,0 +1,6 @@
+[submodule "boringssl"]
+	path = boringssl
+	url = https://github.com/r6027911/boringssl.git
+[submodule "jsoncpp"]
+	path = jsoncpp
+	url = https://github.com/r6027911/jsoncpp.git
