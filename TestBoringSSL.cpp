@@ -15,19 +15,15 @@
 #include <openssl/bio.h>
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
-#include <map>
 
+#include <map>
+#include <chrono>
+#include <thread>
 
 #include "boringssl/ssl/ja3/ssl_ja3.h"
 
+#include "boringssl/ssl/internal.h"
 
-// #if DEBUG
-// #pragma comment(lib, "crypto.lib")
-// #pragma comment(lib, "ssl.lib")
-// #else
-// #pragma comment(lib, "Release/crypto.lib")
-// #pragma comment(lib, "Release/ssl.lib")
-// #endif
 
 #include "transport_common.h"
 #include <regex>
@@ -39,30 +35,39 @@
 #define GREEN   "\033[32m"      /* Green */
 
 
-static  std::string DoConnection(SSL_CTX* ctx,
-    std::map<std::string, std::string> args_map,
-    bool (*cb)(SSL* ssl, int sock)) {
+static bssl::UniquePtr<BIO> session_out;
+static bssl::UniquePtr<SSL_SESSION> resume_session;
+static SSL *ssl;
+
+
+
+static std::string DoConnection(SSL_CTX* ctx, std::map<std::string, std::string> args_map, bool (*cb)(SSL* ssl, int sock)) {
     int sock = -1;
+    
     if (!Connect(&sock, args_map["-connect"])) {
         return false;
-    }
+    }   
+     
 
     bssl::UniquePtr<BIO> bio(BIO_new_socket(sock, BIO_CLOSE));
-    bssl::UniquePtr<SSL> ssl(SSL_new(ctx));
+    ssl = SSL_new(ctx);
 
-    SSL_set_bio(ssl.get(), bio.get(), bio.get());
+    ja3::SSL_ja3& ja3 = ja3::SSL_ja3::getInstance();
+    ja3.configureExtensions(ssl);
+
+    SSL_set_bio(ssl, bio.get(), bio.get());
     bio.release();
 
-    int ret = SSL_connect(ssl.get());
+    int ret = SSL_connect(ssl);
     if (ret != 1) {
-        int ssl_err = SSL_get_error(ssl.get(), ret);
+        int ssl_err = SSL_get_error(ssl, ret);
         PrintSSLError(stderr, "Error while connecting", ssl_err, ret);
         return false;
     }
 
     fprintf(stderr, "Connected.\n");
     bssl::UniquePtr<BIO> bio_stderr(BIO_new_fp(stderr, BIO_NOCLOSE));
-    PrintConnectionInfo(bio_stderr.get(), ssl.get());
+    PrintConnectionInfo(bio_stderr.get(), ssl);
     fprintf(stderr, "\n");
 
     std::string request = "GET " + args_map["-path"] + " HTTP/1.1\r\n"
@@ -71,23 +76,20 @@ static  std::string DoConnection(SSL_CTX* ctx,
         "\r\n";
 
     int ed_size = request.size();
-    int ssl_ret = SSL_write(ssl.get(), request.data(), ed_size);
+    int ssl_ret = SSL_write(ssl, request.data(), ed_size);
 
     char buffer[4096];
     std::string response = "";
     int bytesRead;
-    while ((bytesRead = SSL_read(ssl.get(), buffer, sizeof(buffer))) > 0) {
+    while ((bytesRead = SSL_read(ssl, buffer, sizeof(buffer))) > 0) {
         response += std::string(buffer, bytesRead);
     }
-    
-    //std::cout << response << std::endl;
 
-   
+    cb(ssl, sock);
     
-    cb(ssl.get(), sock);
-
-    return response;
+    return  response;
 }
+
 
 bool Client(std::vector<std::string>& args) {
     if (!InitSocketLibrary()) {
@@ -112,17 +114,23 @@ bool Client(std::vector<std::string>& args) {
         std::cout << "URL does not match expected format" << std::endl;
         return false;
     }
-
+        
+    
     std::string fingerPrintFile = std::filesystem::current_path().string() + "/fingerprint_test.txt";
     std::ifstream fStream(fingerPrintFile, std::ios::binary);
     std::string line;
     ja3::SSL_ja3 &ja3 = ja3::SSL_ja3::getInstance();
+    
 
     while (std::getline(fStream, line))
     {
         std::cout << std::endl << std::endl;
         std::cout << "Processing fingerprint:" << std::endl << line << std::endl;
+       
         ja3.InitForString(line);
+     
+        bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
+
         std::cout << "Validate ciphers: ";
         std::vector<uint16_t>badCiphers = ja3.ssl_ja3_validate_ciphers();
         if (!badCiphers.empty()) {
@@ -148,7 +156,7 @@ bool Client(std::vector<std::string>& args) {
         }
         std::cout << GREEN << "OK" << RESET << std::endl;
         std::cout << "Processing network request to https://tls.peet.ws/api/tls" << std::endl;
-        bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method())); 
+        
         std::string response = DoConnection(ctx.get(), args_map, &TransferData);
 
         std::cout << "Write server response to file" << std::endl;
@@ -157,7 +165,6 @@ bool Client(std::vector<std::string>& args) {
 
         Json::Reader reader;
         Json::Value root;
-
 
         std::regex rgx("\\n(\\{[\\S\\s]*)");
         std::smatch matches;
@@ -179,23 +186,13 @@ bool Client(std::vector<std::string>& args) {
             }
             else {
                 std::cout << RED << "EROR, Parsing server response" << RESET << std::endl;
-            }
-        
+            }       
         
         }
         else {
             std::cout << RED << "EROR, Parsing server response" << RESET << std::endl;
         }
-
-        
-        
-       
-
-    }
-
-
-
-    
+    }  
 
     return true;
 }

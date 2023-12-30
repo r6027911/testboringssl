@@ -53,6 +53,8 @@ void PrintConnectionInfo(BIO *bio, const SSL *ssl);
 
 bool SocketSetNonBlocking(int sock, bool is_non_blocking);
 
+static void PrintSocketError(const char* function);
+
 // PrintSSLError prints information about the most recent SSL error to stderr.
 // |ssl_err| must be the output of |SSL_get_error| and the |SSL| object must be
 // connected to socket from |Connect|.

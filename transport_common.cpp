@@ -20,9 +20,8 @@
 #define _SCL_SECURE_NO_WARNINGS
 #endif
 
-#ifndef WIN32_LEAN_AND_MEAN
+
 #define WIN32_LEAN_AND_MEAN
-#endif
 
 #include <openssl/base.h>
 
@@ -66,9 +65,13 @@ OPENSSL_MSVC_PRAGMA(comment(lib, "Ws2_32.lib"))
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
 
+
+
 #include "../crypto/internal.h"
 #include "internal.h"
 #include "transport_common.h"
+
+
 
 
 #if defined(OPENSSL_WINDOWS)
@@ -346,11 +349,9 @@ void PrintConnectionInfo(BIO *bio, const SSL *ssl) {
   bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(ssl));
   if (peer != nullptr) {
     BIO_printf(bio, "  Cert subject: ");
-    X509_NAME_print_ex(bio, X509_get_subject_name(peer.get()), 0,
-                       XN_FLAG_ONELINE);
+    X509_NAME_print_ex(bio,X509_get_subject_name(peer.get()), 0,XN_FLAG_ONELINE);
     BIO_printf(bio, "\n  Cert issuer: ");
-    X509_NAME_print_ex(bio, X509_get_issuer_name(peer.get()), 0,
-                       XN_FLAG_ONELINE);
+    X509_NAME_print_ex(bio, X509_get_issuer_name(peer.get()), 0,XN_FLAG_ONELINE);
     BIO_printf(bio, "\n");
   }
 }
@@ -515,11 +516,11 @@ class SocketWaiter {
     }
 
     // Spawn a thread to block on stdin.
-    /*std::shared_ptr<StdinState> state = stdin_;
+    std::shared_ptr<StdinState> state = stdin_;
     std::thread thread([state]() {
       for (;;) {
         uint8_t buf[512];
-        int ret = _read(0 , buf, sizeof(buf));
+        int ret = _read(0 /* stdin */, buf, sizeof(buf));
         if (ret <= 0) {
           if (ret < 0) {
             perror("read from stdin");
@@ -540,7 +541,7 @@ class SocketWaiter {
           state->cond.wait(lock, [&] { return !state->buffer_full(); });
 
           // Copy what we can and signal to the caller.
-          size_t todo = std::min(len - written, state->buffer_remaining());
+          size_t todo = (std::min)(len - written, state->buffer_remaining());
           state->buffer.insert(state->buffer.end(), buf + written,
                                buf + written + todo);
           written += todo;
@@ -548,7 +549,7 @@ class SocketWaiter {
         }
       }
     });
-    thread.detach();*/
+    thread.detach();
     return true;
   }
 
@@ -704,7 +705,6 @@ bool WriteToFD(int fd, size_t* out_bytes_written, const void* in, size_t num) {
     *out_bytes_written = ret;
     return true;
 }
-
 
 
 
