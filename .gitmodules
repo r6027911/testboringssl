@@ -2,5 +2,14 @@
 	path = boringssl
 	url = https://github.com/r6027911/boringssl.git
 [submodule "jsoncpp"]
-	path = jsoncpp
+	path = third_party/jsoncpp
 	url = https://github.com/r6027911/jsoncpp.git
+[submodule "third_party/brotli"]
+	path = third_party/brotli
+	url = https://github.com/r6027911/brotli.git
+[submodule "third_party/zlib"]
+	path = third_party/zlib
+	url = https://github.com/r6027911/zlib.git
+[submodule "third_party/zstd"]
+	path = third_party/zstd
+	url = https://github.com/r6027911/zstd.git
