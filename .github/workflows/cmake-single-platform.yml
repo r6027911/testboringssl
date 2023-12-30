@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout submodules
-      uses: textbook/git-checkout-submodule-action@2.1.1
+    - name: Submodule Checkout
+      uses: jwsi/submodule-checkout@v1
             
 
     - name: Configure CMake
