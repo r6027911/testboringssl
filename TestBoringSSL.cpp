@@ -161,7 +161,7 @@ bool Client(std::vector<std::string>& args) {
 
         std::cout << "Write server response to file" << std::endl;
         ja3.Log(response);
-        std::cout << "Validating server response ja3 : ";
+        std::cout << "Validating server response ja3 : " << std::endl;;
 
         Json::Reader reader;
         Json::Value root;
@@ -175,7 +175,9 @@ bool Client(std::vector<std::string>& args) {
             if (parseSuccess) {
                 const Json::Value resultValue = root["tls"]["ja3"];
                 std::string serverJa3Str = resultValue.asString();
-                if (serverJa3Str.compare(&line[1])) {
+                std::cout << "serverJa3Str: " << serverJa3Str << std::endl;
+                std::cout << "configJa3Str: " << &line[2] << std::endl;
+                if (serverJa3Str.compare(&line[2]) == 0) {
                     std::cout << GREEN << "OK, Strings matched" << RESET << std::endl;
                 }
                 else {
